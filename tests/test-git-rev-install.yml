@@ -1,0 +1,42 @@
+name: Test git rev install
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      RUNNER_TOOL_CACHE: /tmp/runner-tool-cache
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Ensure Rust/Cargo is available
+        run: |
+          if ! command -v cargo > /dev/null 2>&1; then
+            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable --profile minimal
+            echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          fi
+      - name: Resolve rev for toml-cli v0.2.3
+        id: resolve
+        run: |
+          # Try to get the dereferenced commit SHA (^{} suffix handles annotated tags)
+          REV=$(git ls-remote https://github.com/gnprice/toml-cli refs/tags/v0.2.3^{} refs/tags/v0.2.3 | head -1 | awk '{print $1}')
+          echo "Resolved rev: $REV"
+          echo "rev=$REV" >> "$GITHUB_OUTPUT"
+      - name: Install toml-cli from git rev
+        id: action
+        uses: .
+        with:
+          tool: toml-cli
+          git: https://github.com/gnprice/toml-cli
+          rev: ${{ steps.resolve.outputs.rev }}
+          locked: 'false'
+      - name: Assert tool is installed
+        run: |
+          echo "Checking toml binary is available..."
+          export PATH="${RUNNER_TOOL_CACHE}/toml-cli/bin:$HOME/.cargo/bin:$PATH"
+          if ! command -v toml > /dev/null 2>&1; then
+            echo "FAIL: 'toml' binary not found on PATH"
+            echo "PATH=$PATH"
+            ls -la "${RUNNER_TOOL_CACHE}/toml-cli/bin/" 2>/dev/null || echo "bin dir not found"
+            exit 1
+          fi
+          echo "PASS: toml binary found at $(command -v toml)"
