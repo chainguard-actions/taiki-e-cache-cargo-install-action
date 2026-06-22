@@ -1,0 +1,36 @@
+name: Test basic cargo install with cache
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      RUNNER_TOOL_CACHE: /opt/hostedtoolcache
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Ensure RUNNER_TOOL_CACHE exists
+        run: mkdir -p /opt/hostedtoolcache
+      - name: Install Rust toolchain
+        run: |
+          if ! command -v cargo > /dev/null 2>&1; then
+            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable --profile minimal
+            echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+            export PATH="$HOME/.cargo/bin:$PATH"
+          fi
+          cargo --version
+      - name: Install toml-cli via cache-cargo-install-action
+        id: action
+        uses: .
+        with:
+          tool: toml-cli@0.2.3
+          locked: 'true'
+      - name: Assert toml is installed and runnable
+        run: |
+          export PATH="/opt/hostedtoolcache/toml-cli/bin:$PATH"
+          echo "Checking toml is available..."
+          if ! command -v toml > /dev/null 2>&1; then
+            echo "FAIL: toml command not found in PATH"
+            exit 1
+          fi
+          echo "toml version: $(toml --version)"
+          echo "PASS: toml-cli is installed and runnable"

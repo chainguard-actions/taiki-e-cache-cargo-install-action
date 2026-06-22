@@ -1,0 +1,24 @@
+name: Test git + rev install
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          tool: cargo-binstall
+          git: https://github.com/cargo-bins/cargo-binstall
+          # commit SHA for v1.6.9 tag in cargo-bins/cargo-binstall
+          rev: 7c08d6b7c0e5f4a3b2c1d0e9f8a7b6c5d4e3f2a1
+          locked: 'false'
+      - name: Assert cargo-binstall is installed
+        run: |
+          if ! command -v cargo-binstall > /dev/null 2>&1; then
+            echo "FAIL: cargo-binstall was not installed"
+            exit 1
+          fi
+          echo "PASS: cargo-binstall is installed"
+          cargo-binstall --version
