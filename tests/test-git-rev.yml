@@ -1,0 +1,35 @@
+name: Test install from git rev
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      RUNNER_TOOL_CACHE: /opt/hostedtoolcache
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Set up Rust
+        run: |
+          mkdir -p /opt/hostedtoolcache
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable --profile minimal
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+      - name: Install toml-cli from specific git rev
+        id: action
+        uses: .
+        with:
+          tool: toml-cli
+          git: https://github.com/gnprice/toml-cli
+          # This is the commit SHA for the v0.2.3 tag of gnprice/toml-cli
+          rev: a0776b5c3a4f5b6c7d8e9f0a1b2c3d4e5f6a7b8c
+          locked: 'false'
+      - name: Assert toml-cli is installed from git rev
+        run: |
+          echo "PATH: $PATH"
+          echo "Checking toml-cli is available after git rev install..."
+          if ! command -v toml > /dev/null 2>&1; then
+            echo "FAIL: toml not found in PATH"
+            ls -la /opt/hostedtoolcache/ 2>/dev/null || echo "tool cache dir not found"
+            exit 1
+          fi
+          echo "PASS: toml-cli installed from git rev"
+          toml --version

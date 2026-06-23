@@ -1,0 +1,158 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+This project adheres to [Semantic Versioning](https://semver.org).
+
+<!--
+Note: In this file, do not use the hard wrap in the middle of a sentence for compatibility with GitHub comment style markdown rendering.
+-->
+
+## [Unreleased]
+
+## [3.0.7] - 2026-05-02
+
+- Update `actions/cache` to 5.0.5.
+
+## [3.0.6] - 2026-04-08
+
+- Improve robustness for network failure.
+
+## [3.0.5] - 2026-04-04
+
+- Implement workaround for [windows-11-arm runner bug](https://github.com/actions/partner-runner-images/issues/169) which may causes issue that the action successfully completes but the crate is not installed.
+
+  We have not yet received any reports of this issue occurring with this action, but given the nature of the problem, it is possible that it could be affected.
+
+## [3.0.4] - 2026-03-28
+
+- Pin `actions/cache` action with commit hash.
+
+## [3.0.3] - 2026-03-08
+
+- Avoid triggering [zizmor ref-confusion](https://docs.zizmor.sh/audits/#ref-confusion) when using this action in form of `uses: taiki-e/cache-cargo-install-action@v3`.
+
+## [3.0.2] - 2026-02-14
+
+- Improve support for Linux systems without tar is installed.
+
+- Work around issue where cache doesn't work with "/bin/tar: unrecognized option: posix" warning on Alpine-based image.
+
+## [3.0.1] - 2026-01-11
+
+- Improve support for Windows with MSYS2 bash. ([#15](https://github.com/taiki-e/cache-cargo-install-action/pull/15), thanks @chitoku-k)
+
+- Enable [release immutability](https://docs.github.com/en/code-security/supply-chain-security/understanding-your-software-supply-chain/immutable-releases).
+
+## [3.0.0] - 2025-12-30
+
+- Update `actions/cache` from 4 to 5. ([#14](https://github.com/taiki-e/cache-cargo-install-action/pull/14))
+
+## [2.3.1] - 2025-09-28
+
+- Fix version parsing failures on Windows caused by trailing carriage returns (`\r`) in JSON responses from crates.io API. ([#12](https://github.com/taiki-e/cache-cargo-install-action/pull/12), thanks @Xevion)
+
+## [2.3.0] - 2025-07-22
+
+- Support `features`, `no-default-features`, and `all-features` input options. ([#9](https://github.com/taiki-e/cache-cargo-install-action/pull/9), thanks @AlexTMjugador)
+
+- Support more host architectures.
+
+## [2.2.0] - 2025-06-29
+
+- Support AArch64 Windows. ([416e06a](https://github.com/taiki-e/cache-cargo-install-action/commit/416e06a71d56b46522f4853a13720491b1e04f8a))
+
+## [2.1.2] - 2025-06-18
+
+- Fix installation failure on Ubuntu 24.04 due to HTTP 403 error on requests to crates.io. ([#11](https://github.com/taiki-e/cache-cargo-install-action/pull/11), thanks @ctz)
+
+## [2.1.1] - 2025-02-05
+
+- Fix regression on Windows introduced in 2.1.0.
+
+## [2.1.0] - 2025-01-20
+
+- Improve support for Alpine based containers/self-hosted runners (no longer need to install bash in advance).
+
+## [2.0.1] - 2024-06-10
+
+- Workaround [glibc compatibility issue on archlinux](https://github.com/taiki-e/install-action/issues/521).
+
+## [2.0.0] - 2024-04-26
+
+- Update `actions/cache` from 3 to 4. ([#3](https://github.com/taiki-e/cache-cargo-install-action/pull/3))
+
+  This [breaks compatibility with CentOS 7 and Ubuntu 18.04](https://github.com/actions/runner/issues/2906) so it is treated as a breaking change.
+
+## [1.4.0] - 2024-04-26
+
+- Improve support for Arch based containers/self-hosted runners.
+
+## [1.3.0] - 2023-10-15
+
+- Add `git` input option to install from the specified Git URL.
+
+## [1.2.2] - 2023-09-16
+
+- Fix potential bug on Windows self-hosted runner.
+
+## [1.2.1] - 2023-07-31
+
+- Improve performance and robustness for cases where the host environment lacks the packages required for installation, such as containers or self-hosted runners.
+
+## [1.2.0] - 2023-05-06
+
+- Add `locked` input option (default to `true`) to allow choice of whether or not to use `--locked` flag.
+
+## [1.1.1] - 2023-01-14
+
+- Prevent pre-release version from being installed as the latest version when patch/minor version is omitted.
+
+## [1.1.0] - 2023-01-14
+
+- Support omitting the patch/minor version.
+
+  For example:
+
+  ```yaml
+  - uses: taiki-e/cache-cargo-install-action@v1
+    with:
+      tool: cargo-hack@0.5
+  ```
+
+  You can also omit the minor version if the major version of tool is 1 or greater.
+
+## [1.0.1] - 2023-01-13
+
+- Remove extra `apk` calls on alpine.
+
+## [1.0.0] - 2023-01-13
+
+Initial release
+
+[Unreleased]: https://github.com/taiki-e/cache-cargo-install-action/compare/v3.0.7...HEAD
+[3.0.7]: https://github.com/taiki-e/cache-cargo-install-action/compare/v3.0.6...v3.0.7
+[3.0.6]: https://github.com/taiki-e/cache-cargo-install-action/compare/v3.0.5...v3.0.6
+[3.0.5]: https://github.com/taiki-e/cache-cargo-install-action/compare/v3.0.4...v3.0.5
+[3.0.4]: https://github.com/taiki-e/cache-cargo-install-action/compare/v3.0.3...v3.0.4
+[3.0.3]: https://github.com/taiki-e/cache-cargo-install-action/compare/v3.0.2...v3.0.3
+[3.0.2]: https://github.com/taiki-e/cache-cargo-install-action/compare/v3.0.1...v3.0.2
+[3.0.1]: https://github.com/taiki-e/cache-cargo-install-action/compare/v3.0.0...v3.0.1
+[3.0.0]: https://github.com/taiki-e/cache-cargo-install-action/compare/v2.3.1...v3.0.0
+[2.3.1]: https://github.com/taiki-e/cache-cargo-install-action/compare/v2.3.0...v2.3.1
+[2.3.0]: https://github.com/taiki-e/cache-cargo-install-action/compare/v2.2.0...v2.3.0
+[2.2.0]: https://github.com/taiki-e/cache-cargo-install-action/compare/v2.1.2...v2.2.0
+[2.1.2]: https://github.com/taiki-e/cache-cargo-install-action/compare/v2.1.1...v2.1.2
+[2.1.1]: https://github.com/taiki-e/cache-cargo-install-action/compare/v2.1.0...v2.1.1
+[2.1.0]: https://github.com/taiki-e/cache-cargo-install-action/compare/v2.0.1...v2.1.0
+[2.0.1]: https://github.com/taiki-e/cache-cargo-install-action/compare/v2.0.0...v2.0.1
+[2.0.0]: https://github.com/taiki-e/cache-cargo-install-action/compare/v1.4.0...v2.0.0
+[1.4.0]: https://github.com/taiki-e/cache-cargo-install-action/compare/v1.3.0...v1.4.0
+[1.3.0]: https://github.com/taiki-e/cache-cargo-install-action/compare/v1.2.2...v1.3.0
+[1.2.2]: https://github.com/taiki-e/cache-cargo-install-action/compare/v1.2.1...v1.2.2
+[1.2.1]: https://github.com/taiki-e/cache-cargo-install-action/compare/v1.2.0...v1.2.1
+[1.2.0]: https://github.com/taiki-e/cache-cargo-install-action/compare/v1.1.1...v1.2.0
+[1.1.1]: https://github.com/taiki-e/cache-cargo-install-action/compare/v1.1.0...v1.1.1
+[1.1.0]: https://github.com/taiki-e/cache-cargo-install-action/compare/v1.0.1...v1.1.0
+[1.0.1]: https://github.com/taiki-e/cache-cargo-install-action/compare/v1.0.0...v1.0.1
+[1.0.0]: https://github.com/taiki-e/cache-cargo-install-action/releases/tag/v1.0.0
