@@ -1,0 +1,38 @@
+name: Test install with no-default-features
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install Rust toolchain
+        run: |
+          if ! command -v cargo > /dev/null 2>&1; then
+            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable --profile minimal
+            echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          fi
+          cargo --version || "$HOME/.cargo/bin/cargo" --version
+      - name: Install toml-cli with no-default-features
+        id: action
+        uses: .
+        with:
+          tool: toml-cli@0.2.3
+          locked: 'false'
+          no-default-features: 'true'
+      - name: Assert tool is installed
+        run: |
+          echo "Checking toml-cli is available after no-default-features install..."
+          TOOL_BIN="${RUNNER_TOOL_CACHE}/toml-cli/bin"
+          echo "Tool bin dir: $TOOL_BIN"
+          if [ -f "${TOOL_BIN}/toml" ]; then
+            echo "PASS: toml binary found in tool cache (no-default-features)"
+            "${TOOL_BIN}/toml" --version || true
+          elif command -v toml > /dev/null 2>&1; then
+            echo "PASS: toml is available in PATH"
+            toml --version
+          else
+            echo "FAIL: toml not found in PATH or tool cache"
+            ls -la "${TOOL_BIN}" 2>/dev/null || echo "Tool bin dir does not exist"
+            exit 1
+          fi

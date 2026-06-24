@@ -1,16 +1,162 @@
-# taiki-e/cache-cargo-install-action
+# cache-cargo-install-action
 
-GitHub Action for cargo install with cache
+[![release](https://img.shields.io/github/release/taiki-e/cache-cargo-install-action?style=flat-square&logo=github)](https://github.com/taiki-e/cache-cargo-install-action/releases/latest)
+[![github actions](https://img.shields.io/github/actions/workflow/status/taiki-e/cache-cargo-install-action/ci.yml?branch=main&style=flat-square&logo=github)](https://github.com/taiki-e/cache-cargo-install-action/actions)
 
-Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at [https://github.com/taiki-e/cache-cargo-install-action](https://github.com/taiki-e/cache-cargo-install-action).
+GitHub Action for `cargo install` with cache.
 
-## Versions
+This installs the specified crate using `cargo install` and caches the installed binaries using [actions/cache].
+If binaries for the specified crate are already cached, restore the cache instead of calling `cargo install`.
 
-| Version | Tag | Upstream commit |
-|---------|-----|-----------------|
-| v3.0.4 | [`v3.0.4`](https://github.com/chainguard-actions/taiki-e-cache-cargo-install-action/tree/v3.0.4) | [`a086307`](https://github.com/taiki-e/cache-cargo-install-action/commit/a08630789e5d5e43eddea7354c8bbd11755fb3d2) |
-| v3.0.5 | [`v3.0.5`](https://github.com/chainguard-actions/taiki-e-cache-cargo-install-action/tree/v3.0.5) | [`a8b9ecf`](https://github.com/taiki-e/cache-cargo-install-action/commit/a8b9ecf8e0c0ea09d7481cfc583a5203ecd585b5) |
-| v3.0.7 | [`v3.0.7`](https://github.com/chainguard-actions/taiki-e-cache-cargo-install-action/tree/v3.0.7) | [`417450f`](https://github.com/taiki-e/cache-cargo-install-action/commit/417450f3c33ee20393705369577571770643d4c7) |
+This was originally intended for installing crates that are not supported by [install-action].
+For performance and robustness, we recommend using [install-action] if the tool is supported by [install-action].
+
+- [Usage](#usage)
+  - [Inputs](#inputs)
+  - [Example workflow](#example-workflow)
+- [Migrate from/to install-action](#migrate-fromto-install-action)
+- [Security](#security)
+- [Compatibility](#compatibility)
+- [Related Projects](#related-projects)
+- [License](#license)
+
+## Usage
+
+### Inputs
+
+| Name | Required | Description | Type | Default |
+| ---- | :------: | ----------- | ---- | ------- |
+| tool | **✓** | Crate to install | String | |
+| locked | | Use `--locked` flag | Boolean | true |
+| git | | Install from the specified Git URL (see [action.yml](action.yml) for more) | String | |
+| tag | | Tag to use when installing from git | String | |
+| rev | | Specific commit to use when installing from git | String | |
+| features | | Comma-separated list of features to enable when installing the crate | String | |
+| no-default-features | | Pass `--no-default-features` to `cargo install` | Boolean | false |
+| all-features | | Pass `--all-features` to `cargo install` | Boolean | false |
+
+### Example workflow
+
+To install the latest version:
+
+```yaml
+- uses: taiki-e/cache-cargo-install-action@v3
+  with:
+    tool: cargo-hack
+```
+
+To install a specific version, use `@version` syntax:
+
+```yaml
+- uses: taiki-e/cache-cargo-install-action@v3
+  with:
+    tool: cargo-hack@0.5.24
+```
+
+You can also omit patch version.
+(You can also omit the minor version if the major version is 1 or greater.)
+
+```yaml
+- uses: taiki-e/cache-cargo-install-action@v3
+  with:
+    tool: cargo-hack@0.5
+```
+
+## Migrate from/to install-action
+
+This action provides an interface compatible with [install-action].
+
+Therefore, migrating from/to [install-action] is usually just a change of action to be used. (if the tool and version are supported by install-action or install-action's `binstall` fallback)
+
+To migrate from this action to install-action:
+
+```diff
+- - uses: taiki-e/cache-cargo-install-action@v3
++ - uses: taiki-e/install-action@v2
+    with:
+      tool: cargo-hack
+```
+
+To migrate from install-action to this action:
+
+```diff
+- - uses: taiki-e/install-action@v2
++ - uses: taiki-e/cache-cargo-install-action@v3
+    with:
+      tool: cargo-hack
+```
+
+The interface of this action is a subset of the interface of [install-action], so note the following limitations when migrating from install-action to this action.
+
+- install-action supports specifying multiple crates in a single action call, but this action does not.
+
+  For example, in install-action, you can write:
+
+  ```yaml
+  - uses: taiki-e/install-action@v2
+    with:
+      tool: cargo-hack,cargo-minimal-versions
+  ```
+
+  In this action, you need to write:
+
+  ```yaml
+  - uses: taiki-e/cache-cargo-install-action@v3
+    with:
+      tool: cargo-hack
+  - uses: taiki-e/cache-cargo-install-action@v3
+    with:
+      tool: cargo-minimal-versions
+  ```
+
+- install-action supports `@<tool_name>` shorthand, but this action does not.
+
+## Security
+
+The `@v<major>` tags are updated with each release. If you want to enhance workflow stability and security against supply chain attacks, consider using the `@v<major>.<minor>.<patch>` tag or their hash to pin the version and regularly updating with dependency cooldown. Since all releases are immutable, pinning the version in either way should have the same effect.
+
+## Compatibility
+
+This action has been tested for GitHub-hosted runners (Ubuntu, macOS, Windows) and containers (Ubuntu, Debian, Fedora, Alma, Arch, Alpine).
+
+To use this action in self-hosted runners or in containers, at least the following tools are required:
+
+- cargo
+
+On Linux, if other required tools are missing, this action will attempt to install them from distro's package manager, so no pre-setup is usually required.
+
+On other platforms, the following tools are also required:
+
+- bash
+- jq (only on non-Windows platforms, and when installing the latest version or the patch version of the specified version is omitted)
+- curl (only when installing the latest version or the patch version of the specified version is omitted)
+- tar
+
+Note that what this action installs for its setup (such as above tools) is considered an implementation detail if they are installed by this action's side, and there is no guarantee that they will be available in subsequent steps, because this action is not an action for installing those tools.
+
+## Related Projects
+
+- [install-action]: GitHub Action for installing development tools (mainly from GitHub Releases).
+- [create-gh-release-action]: GitHub Action for creating GitHub Releases based on changelog.
+- [upload-rust-binary-action]: GitHub Action for building and uploading Rust binary to GitHub Releases.
+- [setup-cross-toolchain-action]: GitHub Action for setup toolchains for cross compilation and cross testing for Rust.
+- [checkout-action]: GitHub Action for checking out a repository. (Simplified actions/checkout alternative that does not depend on Node.js.)
+
+[actions/cache]: https://github.com/actions/cache
+[checkout-action]: https://github.com/taiki-e/checkout-action
+[create-gh-release-action]: https://github.com/taiki-e/create-gh-release-action
+[install-action]: https://github.com/taiki-e/install-action
+[setup-cross-toolchain-action]: https://github.com/taiki-e/setup-cross-toolchain-action
+[upload-rust-binary-action]: https://github.com/taiki-e/upload-rust-binary-action
+
+## License
+
+Licensed under either of [Apache License, Version 2.0](LICENSE-APACHE) or
+[MIT license](LICENSE-MIT) at your option.
+
+Unless you explicitly state otherwise, any contribution intentionally submitted
+for inclusion in the work by you, as defined in the Apache-2.0 license, shall
+be dual licensed as above, without any additional terms or conditions.
 
 ## Privacy
 

@@ -1,0 +1,40 @@
+name: Test cargo install from git with rev
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install Rust toolchain
+        run: |
+          if ! command -v cargo > /dev/null 2>&1; then
+            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable --profile minimal
+            echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          fi
+          cargo --version || "$HOME/.cargo/bin/cargo" --version
+      - name: Install toml-cli from git at a specific rev
+        id: action
+        uses: .
+        with:
+          tool: toml-cli
+          git: https://github.com/gnprice/toml-cli
+          rev: 77edbb5
+          locked: 'false'
+      - name: Assert toml-cli is installed
+        run: |
+          echo "Checking toml-cli is available..."
+          if command -v toml > /dev/null 2>&1; then
+            echo "PASS: toml is available in PATH"
+            toml --version
+          else
+            # Also check common cargo bin locations
+            CARGO_BIN="$HOME/.cargo/bin/toml"
+            if [ -f "$CARGO_BIN" ]; then
+              echo "PASS: toml binary found at $CARGO_BIN"
+              "$CARGO_BIN" --version
+            else
+              echo "FAIL: toml not found in PATH or cargo bin"
+              exit 1
+            fi
+          fi

@@ -1,0 +1,47 @@
+name: Test install specific version
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install Rust toolchain
+        run: |
+          if ! command -v cargo > /dev/null 2>&1; then
+            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable --profile minimal
+            echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          fi
+          cargo --version || "$HOME/.cargo/bin/cargo" --version
+      - name: Install toml-cli at specific version
+        id: action
+        uses: .
+        with:
+          tool: toml-cli@0.2.3
+          locked: 'false'
+      - name: Assert specific version is installed
+        run: |
+          echo "Checking toml-cli version..."
+          TOOL_BIN="${RUNNER_TOOL_CACHE}/toml-cli/bin"
+          echo "Tool bin dir: $TOOL_BIN"
+          if [ -f "${TOOL_BIN}/toml" ]; then
+            VERSION=$("${TOOL_BIN}/toml" --version 2>&1 | head -1)
+            echo "Installed version: $VERSION"
+            if ! echo "$VERSION" | grep -q "0.2.3"; then
+              echo "FAIL: expected version 0.2.3, got: $VERSION"
+              exit 1
+            fi
+            echo "PASS: correct version installed"
+          elif command -v toml > /dev/null 2>&1; then
+            VERSION=$(toml --version 2>&1 | head -1)
+            echo "Installed version: $VERSION"
+            if ! echo "$VERSION" | grep -q "0.2.3"; then
+              echo "FAIL: expected version 0.2.3, got: $VERSION"
+              exit 1
+            fi
+            echo "PASS: correct version installed"
+          else
+            echo "FAIL: toml not found in PATH or tool cache"
+            ls -la "${TOOL_BIN}" 2>/dev/null || echo "Tool bin dir does not exist"
+            exit 1
+          fi
