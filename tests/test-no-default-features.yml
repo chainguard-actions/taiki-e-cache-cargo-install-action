@@ -1,0 +1,44 @@
+name: Test no-default-features option
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      RUNNER_TOOL_CACHE: /opt/hostedtoolcache
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install Rust toolchain
+        run: |
+          if ! command -v cargo > /dev/null 2>&1; then
+            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --no-modify-path
+            echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+            export PATH="$HOME/.cargo/bin:$PATH"
+          fi
+          cargo --version
+      - name: Ensure RUNNER_TOOL_CACHE exists
+        run: mkdir -p /opt/hostedtoolcache
+      - name: Install tool with no-default-features
+        id: action
+        uses: .
+        with:
+          tool: toml-cli@0.2.3
+          locked: 'true'
+          no-default-features: 'true'
+      - name: Assert tool is installed and on PATH
+        run: |
+          echo "Checking if toml-cli is available on PATH (no-default-features)..."
+          if ! command -v toml > /dev/null 2>&1; then
+            echo "FAIL: toml-cli (toml) not found on PATH"
+            exit 1
+          fi
+          echo "PASS: toml-cli is available on PATH with no-default-features"
+      - name: Assert tool produces output
+        run: |
+          VERSION_OUTPUT=$(toml --version 2>&1 || true)
+          echo "actual: $VERSION_OUTPUT"
+          if [ -z "$VERSION_OUTPUT" ]; then
+            echo "FAIL: toml --version produced no output"
+            exit 1
+          fi
+          echo "PASS: toml-cli installed with --no-default-features: $VERSION_OUTPUT"

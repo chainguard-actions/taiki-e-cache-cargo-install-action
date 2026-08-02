@@ -1,0 +1,46 @@
+name: Test git install with tag
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      RUNNER_TOOL_CACHE: /opt/hostedtoolcache
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install Rust toolchain
+        run: |
+          if ! command -v cargo > /dev/null 2>&1; then
+            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --no-modify-path
+            echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+            export PATH="$HOME/.cargo/bin:$PATH"
+          fi
+          cargo --version
+      - name: Ensure RUNNER_TOOL_CACHE exists
+        run: mkdir -p /opt/hostedtoolcache
+      - name: Install tool from git with tag
+        id: action
+        uses: .
+        with:
+          tool: cargo-minimal-versions
+          git: https://github.com/taiki-e/cargo-minimal-versions
+          tag: v0.1.19
+          locked: 'false'
+      - name: Assert tool is installed and on PATH
+        run: |
+          echo "Checking if cargo-minimal-versions is available..."
+          if ! command -v cargo-minimal-versions > /dev/null 2>&1; then
+            echo "FAIL: cargo-minimal-versions not found on PATH"
+            exit 1
+          fi
+          echo "PASS: cargo-minimal-versions is available"
+      - name: Assert tool produces output
+        run: |
+          echo "Running cargo minimal-versions --version..."
+          VERSION_OUTPUT=$(cargo minimal-versions --version 2>&1 || true)
+          echo "actual: $VERSION_OUTPUT"
+          if [ -z "$VERSION_OUTPUT" ]; then
+            echo "FAIL: cargo minimal-versions --version produced no output"
+            exit 1
+          fi
+          echo "PASS: cargo minimal-versions --version produced output: $VERSION_OUTPUT"

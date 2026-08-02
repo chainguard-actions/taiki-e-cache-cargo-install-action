@@ -1,0 +1,46 @@
+name: Test git install with rev
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      RUNNER_TOOL_CACHE: /opt/hostedtoolcache
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install Rust toolchain
+        run: |
+          if ! command -v cargo > /dev/null 2>&1; then
+            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --no-modify-path
+            echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+            export PATH="$HOME/.cargo/bin:$PATH"
+          fi
+          cargo --version
+      - name: Ensure RUNNER_TOOL_CACHE exists
+        run: mkdir -p /opt/hostedtoolcache
+      - name: Install tool from git with rev
+        id: action
+        uses: .
+        with:
+          tool: parse-changelog
+          git: https://github.com/taiki-e/parse-changelog
+          rev: d231414
+          locked: 'false'
+      - name: Assert tool is installed and on PATH
+        run: |
+          echo "Checking if parse-changelog is available on PATH..."
+          if ! command -v parse-changelog > /dev/null 2>&1; then
+            echo "FAIL: parse-changelog not found on PATH"
+            exit 1
+          fi
+          echo "PASS: parse-changelog is available on PATH"
+      - name: Assert tool produces output
+        run: |
+          echo "Running parse-changelog --version..."
+          VERSION_OUTPUT=$(parse-changelog --version 2>&1 || true)
+          echo "actual: $VERSION_OUTPUT"
+          if [ -z "$VERSION_OUTPUT" ]; then
+            echo "FAIL: parse-changelog --version produced no output"
+            exit 1
+          fi
+          echo "PASS: parse-changelog --version produced output: $VERSION_OUTPUT"
