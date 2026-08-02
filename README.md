@@ -12,6 +12,7 @@ Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at
 | v3.0.5 | [`v3.0.5`](https://github.com/chainguard-actions/taiki-e-cache-cargo-install-action/tree/v3.0.5) | [`a8b9ecf`](https://github.com/taiki-e/cache-cargo-install-action/commit/a8b9ecf8e0c0ea09d7481cfc583a5203ecd585b5) |
 | v3.0.6 | [`v3.0.6`](https://github.com/chainguard-actions/taiki-e-cache-cargo-install-action/tree/v3.0.6) | [`f9eed3e`](https://github.com/taiki-e/cache-cargo-install-action/commit/f9eed3e4680f27610dc6d8c67be1b88593f7dade) |
 | v3.0.7 | [`v3.0.7`](https://github.com/chainguard-actions/taiki-e-cache-cargo-install-action/tree/v3.0.7) | [`417450f`](https://github.com/taiki-e/cache-cargo-install-action/commit/417450f3c33ee20393705369577571770643d4c7) |
+| v3.0.8 | [`v3.0.8`](https://github.com/chainguard-actions/taiki-e-cache-cargo-install-action/tree/v3.0.8) | [`9ee83da`](https://github.com/taiki-e/cache-cargo-install-action/commit/9ee83daaa7b96a6fab930949ecf1122bba04a389) |
 
 ## Privacy
 
