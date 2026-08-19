@@ -1,23 +1,43 @@
-name: Test git + tag install
+name: Test install from git with tag
 on:
   workflow_dispatch:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      RUNNER_TOOL_CACHE: /opt/hostedtoolcache
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - id: action
+      - name: Ensure RUNNER_TOOL_CACHE exists
+        run: mkdir -p /opt/hostedtoolcache
+      - name: Install Rust toolchain
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable --profile minimal
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+      - name: Install cargo-minimal-versions from git using tag
+        id: action
         uses: .
         with:
-          tool: cargo-binstall
-          git: https://github.com/cargo-bins/cargo-binstall
-          tag: v1.10.20
+          tool: cargo-minimal-versions
+          git: https://github.com/taiki-e/cargo-minimal-versions
+          tag: v0.1.19
           locked: 'false'
-      - name: Assert cargo-binstall is installed
+      - name: Assert cargo-minimal-versions is installed and on PATH
         run: |
-          if ! command -v cargo-binstall > /dev/null 2>&1; then
-            echo "FAIL: cargo-binstall was not installed"
+          echo "PATH: $PATH"
+          echo "Checking cargo-minimal-versions command is available on PATH..."
+          if ! command -v cargo-minimal-versions > /dev/null 2>&1; then
+            echo "FAIL: cargo-minimal-versions command not found on PATH"
             exit 1
           fi
-          echo "PASS: cargo-binstall is installed"
-          cargo-binstall --version
+          echo "PASS: cargo-minimal-versions command found"
+      - name: Assert cargo-minimal-versions version is correct
+        run: |
+          VERSION=$(cargo-minimal-versions --version 2>&1 || true)
+          echo "actual version output: $VERSION"
+          if echo "$VERSION" | grep -q "0.1.19"; then
+            echo "PASS: version 0.1.19 confirmed"
+          else
+            echo "FAIL: expected version 0.1.19 in output: $VERSION"
+            exit 1
+          fi

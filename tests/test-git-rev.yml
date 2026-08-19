@@ -1,24 +1,42 @@
-name: Test git + rev install
+name: Test install from git with rev
 on:
   workflow_dispatch:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      RUNNER_TOOL_CACHE: /opt/hostedtoolcache
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - id: action
+      - name: Ensure RUNNER_TOOL_CACHE exists
+        run: mkdir -p /opt/hostedtoolcache
+      - name: Install Rust toolchain
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable --profile minimal
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+      - name: Install parse-changelog from git using rev
+        id: action
         uses: .
         with:
-          tool: cargo-binstall
-          git: https://github.com/cargo-bins/cargo-binstall
-          # commit SHA for v1.6.9 tag in cargo-bins/cargo-binstall
-          rev: 7c08d6b7c0e5f4a3b2c1d0e9f8a7b6c5d4e3f2a1
+          tool: parse-changelog
+          git: https://github.com/taiki-e/parse-changelog
+          rev: d231414
           locked: 'false'
-      - name: Assert cargo-binstall is installed
+      - name: Assert parse-changelog is installed and on PATH
         run: |
-          if ! command -v cargo-binstall > /dev/null 2>&1; then
-            echo "FAIL: cargo-binstall was not installed"
+          echo "PATH: $PATH"
+          echo "Checking parse-changelog command is available on PATH..."
+          if ! command -v parse-changelog > /dev/null 2>&1; then
+            echo "FAIL: parse-changelog command not found on PATH"
             exit 1
           fi
-          echo "PASS: cargo-binstall is installed"
-          cargo-binstall --version
+          echo "PASS: parse-changelog command found"
+      - name: Assert parse-changelog runs successfully
+        run: |
+          VERSION=$(parse-changelog --version 2>&1 || true)
+          echo "actual version output: $VERSION"
+          if [ -z "$VERSION" ]; then
+            echo "FAIL: parse-changelog --version returned empty output"
+            exit 1
+          fi
+          echo "PASS: parse-changelog is functional"

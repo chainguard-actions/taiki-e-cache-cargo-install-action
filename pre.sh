@@ -386,16 +386,16 @@ safe_rev=$(printf '%s' "${rev}" | tr -d '\n\r')
 safe_features_flag=$(printf '%s' "${features_flag}" | tr -d '\n\r')
 safe_no_default_features_flag=$(printf '%s' "${no_default_features_flag}" | tr -d '\n\r')
 safe_all_features_flag=$(printf '%s' "${all_features_flag}" | tr -d '\n\r')
-{
-  printf 'tool=%s\n' "${safe_tool}"
-  printf 'version=%s\n' "${safe_version}"
-  printf 'key=%s\n' "${safe_key}"
-  printf 'path=%s\n' "${safe_bin_dir}"
-  printf 'locked=%s\n' "${safe_locked}"
-  printf 'git=%s\n' "${safe_git}"
-  printf 'tag=%s\n' "${safe_tag}"
-  printf 'rev=%s\n' "${safe_rev}"
-  printf 'features_flag=%s\n' "${safe_features_flag}"
-  printf 'no_default_features_flag=%s\n' "${safe_no_default_features_flag}"
-  printf 'all_features_flag=%s\n' "${safe_all_features_flag}"
-} >>"${GITHUB_OUTPUT}"
+cat >>"${GITHUB_OUTPUT}" <<EOF
+tool=${safe_tool}
+version=${safe_version}
+key=${safe_key}
+path=${safe_bin_dir}
+locked=${safe_locked}
+git=${safe_git}
+tag=${safe_tag}
+rev=${safe_rev}
+features_flag=${safe_features_flag}
+no_default_features_flag=${safe_no_default_features_flag}
+all_features_flag=${safe_all_features_flag}
+EOF

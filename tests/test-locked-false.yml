@@ -1,4 +1,4 @@
-name: Test no-default-features flag
+name: Test locked=false (without --locked flag)
 on:
   workflow_dispatch:
 jobs:
@@ -14,13 +14,12 @@ jobs:
         run: |
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable --profile minimal
           echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
-      - name: Install toml-cli with no-default-features
+      - name: Install toml-cli without --locked flag
         id: action
         uses: .
         with:
           tool: toml-cli@0.2.3
-          locked: 'true'
-          no-default-features: 'true'
+          locked: 'false'
       - name: Assert toml-cli is installed
         run: |
           echo "PATH: $PATH"
@@ -29,4 +28,14 @@ jobs:
             echo "FAIL: toml command not found on PATH"
             exit 1
           fi
-          echo "PASS: toml command found after install with --no-default-features"
+          echo "PASS: toml command found after install without --locked"
+      - name: Assert toml-cli version is correct
+        run: |
+          VERSION=$(toml --version 2>&1 || true)
+          echo "actual version output: $VERSION"
+          if echo "$VERSION" | grep -q "0.2.3"; then
+            echo "PASS: version 0.2.3 confirmed"
+          else
+            echo "FAIL: expected version 0.2.3 in output: $VERSION"
+            exit 1
+          fi

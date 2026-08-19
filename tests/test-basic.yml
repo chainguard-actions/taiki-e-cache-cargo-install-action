@@ -1,4 +1,4 @@
-name: Test basic cargo install with cache
+name: Test basic usage - install specific version
 on:
   workflow_dispatch:
 jobs:
@@ -12,25 +12,30 @@ jobs:
         run: mkdir -p /opt/hostedtoolcache
       - name: Install Rust toolchain
         run: |
-          if ! command -v cargo > /dev/null 2>&1; then
-            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable --profile minimal
-            echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
-            export PATH="$HOME/.cargo/bin:$PATH"
-          fi
-          cargo --version
-      - name: Install toml-cli via cache-cargo-install-action
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable --profile minimal
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+      - name: Install toml-cli at specific version
         id: action
         uses: .
         with:
           tool: toml-cli@0.2.3
           locked: 'true'
-      - name: Assert toml is installed and runnable
+      - name: Assert toml-cli is installed and on PATH
         run: |
-          export PATH="/opt/hostedtoolcache/toml-cli/bin:$PATH"
-          echo "Checking toml is available..."
+          echo "PATH: $PATH"
+          echo "Checking toml command is available on PATH..."
           if ! command -v toml > /dev/null 2>&1; then
-            echo "FAIL: toml command not found in PATH"
+            echo "FAIL: toml command not found on PATH"
             exit 1
           fi
-          echo "toml version: $(toml --version)"
-          echo "PASS: toml-cli is installed and runnable"
+          echo "PASS: toml command found"
+      - name: Assert toml-cli version is correct
+        run: |
+          VERSION=$(toml --version 2>&1 || true)
+          echo "actual version output: $VERSION"
+          if echo "$VERSION" | grep -q "0.2.3"; then
+            echo "PASS: version 0.2.3 confirmed"
+          else
+            echo "FAIL: expected version 0.2.3 in output: $VERSION"
+            exit 1
+          fi
