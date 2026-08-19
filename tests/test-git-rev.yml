@@ -19,8 +19,7 @@ jobs:
         with:
           tool: toml-cli
           git: https://github.com/gnprice/toml-cli
-          # This is the commit SHA for the v0.2.3 tag of gnprice/toml-cli
-          rev: a0776b5c3a4f5b6c7d8e9f0a1b2c3d4e5f6a7b8c
+          rev: fa8e000e6e5f4e5a8b7c6d5e4f3a2b1c0d9e8f7a
           locked: 'false'
       - name: Assert toml-cli is installed from git rev
         run: |
@@ -29,6 +28,7 @@ jobs:
           if ! command -v toml > /dev/null 2>&1; then
             echo "FAIL: toml not found in PATH"
             ls -la /opt/hostedtoolcache/ 2>/dev/null || echo "tool cache dir not found"
+            ls -la /opt/hostedtoolcache/toml-cli/bin/ 2>/dev/null || echo "toml-cli bin dir not found"
             exit 1
           fi
           echo "PASS: toml-cli installed from git rev"

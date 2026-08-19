@@ -1,4 +1,4 @@
-name: Test no-default-features flag
+name: Test locked flag (default true)
 on:
   workflow_dispatch:
 jobs:
@@ -16,13 +16,12 @@ jobs:
           fi
           cargo --version
 
-      - name: Install toml-cli with no-default-features
+      - name: Install toml-cli with locked=true (default)
         id: action
         uses: .
         with:
           tool: toml-cli@0.2.3
-          locked: 'false'
-          no-default-features: 'true'
+          locked: 'true'
 
       - name: Assert toml-cli is installed
         run: |
@@ -31,5 +30,5 @@ jobs:
             echo "FAIL: toml command not found on PATH"
             exit 1
           fi
-          echo "PASS: toml command found (installed with --no-default-features)"
+          echo "PASS: toml command found (installed with --locked)"
           toml --version || true

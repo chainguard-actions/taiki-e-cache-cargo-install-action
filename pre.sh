@@ -388,7 +388,6 @@ fi
 safe_tool=$(printf '%s' "${tool}" | tr -d '\n\r')
 safe_version=$(printf '%s' "${version}" | tr -d '\n\r')
 safe_key=$(printf '%s' "${key}" | tr -d '\n\r')
-safe_path=$(printf '%s' "${bin_dir}" | tr -d '\n\r')
 safe_locked=$(printf '%s' "${locked}" | tr -d '\n\r')
 safe_git=$(printf '%s' "${git}" | tr -d '\n\r')
 safe_tag=$(printf '%s' "${tag}" | tr -d '\n\r')
@@ -400,7 +399,7 @@ cat >>"${GITHUB_OUTPUT}" <<EOF
 tool=${safe_tool}
 version=${safe_version}
 key=${safe_key}
-path=${safe_path}
+path=${safe_bin_dir}
 locked=${safe_locked}
 git=${safe_git}
 tag=${safe_tag}

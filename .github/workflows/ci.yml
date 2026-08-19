@@ -1,0 +1,232 @@
+name: CI
+
+permissions: {}
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - dev
+  schedule:
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+defaults:
+  run:
+    shell: bash --noprofile --norc -CeEuxo pipefail {0}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  tidy:
+    uses: taiki-e/github-actions/.github/workflows/tidy.yml@5f549ff6b21e9a853f5f613784d5db27746fd2bc # main
+    permissions:
+      contents: write # for creating branch for pr
+      pull-requests: write # unused (used in `codegen-automerge: true` case)
+      security-events: write # for github/codeql-action/*
+    secrets:
+      PR_TOKEN_APP_PRIVATE_KEY: ${{ secrets.PR_TOKEN_APP_PRIVATE_KEY }}
+
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # NB: Sync list with https://github.com/taiki-e/checkout-action/blob/HEAD/.github/workflows/ci.yml
+          - os: ubuntu-22.04
+          - os: ubuntu-22.04-arm
+          - os: ubuntu-24.04
+          - os: ubuntu-24.04-arm
+          - os: ubuntu-slim
+          - os: ubuntu-22.04
+            tool1: cargo-hack@0.5.24
+            tool2: cargo-llvm-cov@0.5.3
+          - os: ubuntu-22.04
+            tool1: cargo-hack@0.5
+            tool2: cargo-llvm-cov@0.4
+          - os: macos-14
+          - os: macos-15
+          - os: macos-15-intel
+          - os: macos-26
+          - os: windows-2022
+          - os: windows-2022
+            bash: msys64
+          - os: windows-2022
+            bash: cygwin
+          - os: windows-2025
+          - os: windows-2025
+            bash: msys64
+          - os: windows-2025
+            bash: cygwin
+          - os: windows-11-arm
+          - os: windows-2025
+            tool1: cargo-hack@0.5.24
+            tool2: cargo-llvm-cov@0.5.3
+          - os: windows-2025
+            tool1: cargo-hack@0.5
+            tool2: cargo-llvm-cov@0.4
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    steps:
+      - run: |
+          printf '%s\n' 'C:\msys64\mingw32\bin' >>"${GITHUB_PATH}"
+          printf '%s\n' 'C:\msys64\usr\bin' >>"${GITHUB_PATH}"
+        if: matrix.bash == 'msys64'
+      - run: |
+          choco install --no-progress --requirechecksums cygwin
+          printf '%s\n' 'C:\tools\cygwin\bin' >>"${GITHUB_PATH}"
+          printf '%s\n' 'C:\tools\cygwin\usr\bin' >>"${GITHUB_PATH}"
+        if: matrix.bash == 'cygwin'
+      - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
+      - uses: taiki-e/github-actions/install-rust@5f549ff6b21e9a853f5f613784d5db27746fd2bc # main # zizmor: ignore[stale-action-refs]
+        with:
+          toolchain: stable
+      - uses: ./
+        with:
+          tool: ${{ matrix.tool1 || 'cargo-hack' }}
+          locked: false
+      - run: cargo hack --version
+      - uses: ./
+        with:
+          tool: ${{ matrix.tool2 || 'cargo-llvm-cov' }}
+      - run: cargo llvm-cov --version
+      - uses: ./
+        with:
+          tool: parse-changelog
+          git: https://github.com/taiki-e/parse-changelog
+          rev: d231414
+      - run: parse-changelog --version
+      - uses: ./
+        with:
+          tool: cargo-minimal-versions
+          git: https://github.com/taiki-e/cargo-minimal-versions
+          tag: v0.1.19
+      - run: cargo minimal-versions --version
+      # Test all shells listed in https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idstepsshell
+      - name: Test bash
+        run: cargo llvm-cov --version
+        shell: bash
+      - name: Test sh
+        run: cargo llvm-cov --version
+        shell: sh
+        if: startsWith(matrix.os, 'ubuntu') || startsWith(matrix.os, 'macos')
+      - name: Test pwsh
+        run: cargo llvm-cov --version
+        shell: pwsh
+      - name: Test powershell
+        run: cargo llvm-cov --version
+        shell: powershell
+        if: startsWith(matrix.os, 'windows')
+      - name: Test cmd
+        run: cargo llvm-cov --version
+        shell: cmd # zizmor: ignore[misfeature] used for compatibility testing
+        if: startsWith(matrix.os, 'windows')
+
+  test-container:
+    strategy:
+      fail-fast: false
+      matrix:
+        container:
+          # NB: Sync list with https://github.com/taiki-e/checkout-action/blob/HEAD/.github/workflows/ci.yml
+          # - ubuntu:14.04 # glibc 2.19 # https://github.com/actions/runner/issues/2906
+          # - ubuntu:16.04 # glibc 2.23 # https://github.com/actions/runner/issues/2906
+          # - ubuntu:18.04 # glibc 2.27 # https://github.com/actions/runner/issues/2906
+          - ubuntu:20.04 # glibc 2.31
+          - ubuntu:22.04 # glibc 2.35
+          - ubuntu:24.04 # glibc 2.39
+          - ubuntu:26.04 # glibc 2.42
+          - ubuntu:rolling
+          # - debian:9-slim # glibc 2.24 # https://github.com/actions/runner/issues/2906
+          - debian:10-slim # glibc 2.28
+          - debian:11-slim # glibc 2.31
+          - debian:12-slim # glibc 2.36
+          - debian:13-slim # glibc 2.41
+          - debian:testing
+          - fedora:latest # glibc 2.39 (as of fedora 40)
+          - almalinux:8 # glibc 2.28
+          - almalinux:8-minimal # glibc 2.28
+          - almalinux:9 # glibc 2.34
+          - almalinux:9-minimal # glibc 2.34
+          - almalinux:10 # glibc 2.39
+          - almalinux:10-minimal # glibc 2.39
+          # - centos:6 # glibc 2.12 # https://github.com/actions/runner/issues/2906
+          # - centos:7 # glibc 2.17 # https://github.com/actions/runner/issues/2906
+          # - opensuse/leap:latest # glibc 2.38 (as of leap 15.6)
+          # - opensuse/tumbleweed:latest # glibc 2.39 (as of 2024-07-19)
+          - archlinux:latest # glibc 2.39 (as of 2024-07-19)
+          # - alpine:3.2 # musl 1.1.11 # Error relocating /__e/node24_alpine/bin/node: {sched_getcpu,pthread_getname_np,memfd_create,pthread_setname_np,getentropy,secure_getenv}: symbol not found
+          # - alpine:3.14 # musl 1.2.2 # "Error relocating /__e/node24_alpine/bin/node: pthread_getname_np: symbol not found" from actions/cache
+          # - alpine:3.15 # musl 1.2.2 # "Error relocating /__e/node24_alpine/bin/node: pthread_getname_np: symbol not found" from actions/cache
+          - alpine:3.16 # musl 1.2.3
+          - alpine:3.17 # musl 1.2.3
+          - alpine:3.18 # musl 1.2.4
+          - alpine:3.19 # musl 1.2.4
+          - alpine:3.20 # musl 1.2.5
+          - alpine:3.21 # musl 1.2.5
+          - alpine:3.22 # musl 1.2.5
+          - alpine:3.23 # musl 1.2.5
+          # - openwrt/rootfs:x86-64-openwrt-24.10 # musl 1.2.5
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    container: ${{ matrix.container }}
+    steps:
+      - name: Install requirements (old debian)
+        run: |
+          # In Debian, the old repositories is removed from the main mirrors some time after EoL.
+          codename=$(grep -E '^VERSION_CODENAME=' /etc/os-release | cut -d= -f2)
+          sed -i /etc/apt/sources.list -e 's/deb.debian.org/archive.debian.org/g' \
+            -e 's|security.debian.org|archive.debian.org/|g' \
+            -e "/${codename}-updates/d"
+        if: startsWith(matrix.container, 'debian:10')
+      - name: Install requirements (ubuntu/debian)
+        run: |
+          apt-get -o Acquire::Retries=10 -qq update
+          apt-get -o Acquire::Retries=10 -o Dpkg::Use-Pty=0 install -y --no-install-recommends ca-certificates curl gcc libc6-dev
+        if: startsWith(matrix.container, 'ubuntu') || startsWith(matrix.container, 'debian')
+      - name: Install requirements (fedora/almalinux)
+        run: |
+          if type -P dnf >/dev/null; then
+            dnf install -y gcc
+          elif type -P microdnf >/dev/null; then
+            microdnf install -y gcc
+          else
+            yum install -y gcc
+          fi
+        if: startsWith(matrix.container, 'fedora') || startsWith(matrix.container, 'almalinux')
+      - name: Install requirements (archlinux)
+        run: pacman -Sy --noconfirm gcc
+        if: startsWith(matrix.container, 'archlinux')
+      - name: Install requirements (recent alpine)
+        run: apk --no-cache add cargo
+        shell: sh
+        if: matrix.container == 'alpine:3.22' || matrix.container == 'alpine:3.23'
+      - name: Install requirements (old alpine)
+        run: apk --no-cache add bash ca-certificates curl gcc musl-dev
+        shell: sh
+        if: startsWith(matrix.container, 'alpine') && matrix.container != 'alpine:3.22' && matrix.container != 'alpine:3.23'
+      - uses: taiki-e/github-actions/install-rust@5f549ff6b21e9a853f5f613784d5db27746fd2bc # main # zizmor: ignore[stale-action-refs]
+        with:
+          toolchain: stable
+        if: matrix.container != 'alpine:3.22' && matrix.container != 'alpine:3.23'
+      - run: apt-get -qq -o Dpkg::Use-Pty=0 purge -y curl
+        if: startsWith(matrix.container, 'ubuntu') || startsWith(matrix.container, 'debian')
+      - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
+      - run: apk --no-cache del curl
+        shell: sh
+        if: startsWith(matrix.container, 'alpine') && matrix.container != 'alpine:3.22' && matrix.container != 'alpine:3.23'
+      # remove bash installed by checkout-action
+      - run: apk --no-cache del bash
+        shell: sh
+        if: startsWith(matrix.container, 'alpine')
+      - uses: ./
+        with:
+          tool: cargo-hack
+          locked: false
+      - run: cargo hack --version
+      - uses: ./
+        with:
+          tool: cargo-llvm-cov
+      - run: cargo llvm-cov --version
