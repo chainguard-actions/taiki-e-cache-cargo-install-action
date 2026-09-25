@@ -1,4 +1,4 @@
-name: Test no-default-features flag
+name: Test git install with rev
 on:
   workflow_dispatch:
 jobs:
@@ -18,14 +18,27 @@ jobs:
           fi
           cargo --version
           mkdir -p "$RUNNER_TOOL_CACHE"
+      - name: Resolve commit SHA for toml-cli v0.2.3
+        id: get-rev
+        run: |
+          # Resolve the commit SHA that the v0.2.3 tag points to.
+          # git ls-remote returns the tag object SHA; dereference with ^{} to get the commit SHA.
+          SHA=$(git ls-remote https://github.com/gnprice/toml-cli refs/tags/v0.2.3^{} | cut -f1)
+          if [ -z "$SHA" ]; then
+            # Fallback: try without dereference (lightweight tag)
+            SHA=$(git ls-remote https://github.com/gnprice/toml-cli refs/tags/v0.2.3 | cut -f1)
+          fi
+          echo "sha=$SHA"
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
       - id: action
         uses: .
         with:
-          tool: toml-cli@0.2.3
-          no-default-features: 'true'
-      - name: Assert binary is available with no-default-features
+          tool: toml-cli
+          git: https://github.com/gnprice/toml-cli
+          rev: ${{ steps.get-rev.outputs.sha }}
+      - name: Assert binary is available after git+rev install
         run: |
-          echo "Checking if toml binary is available after install with --no-default-features..."
+          echo "Checking if toml binary is available after git+rev install..."
           TOOL_BIN="$RUNNER_TOOL_CACHE/toml-cli/bin/toml"
           echo "Looking for binary at: $TOOL_BIN"
           if [ -f "$TOOL_BIN" ]; then

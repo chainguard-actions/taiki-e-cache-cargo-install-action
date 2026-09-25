@@ -1,4 +1,4 @@
-name: Test no-default-features flag
+name: Test basic usage - install specific version
 on:
   workflow_dispatch:
 jobs:
@@ -22,10 +22,9 @@ jobs:
         uses: .
         with:
           tool: toml-cli@0.2.3
-          no-default-features: 'true'
-      - name: Assert binary is available with no-default-features
+      - name: Assert binary is available
         run: |
-          echo "Checking if toml binary is available after install with --no-default-features..."
+          echo "Checking if toml binary is available..."
           TOOL_BIN="$RUNNER_TOOL_CACHE/toml-cli/bin/toml"
           echo "Looking for binary at: $TOOL_BIN"
           if [ -f "$TOOL_BIN" ]; then

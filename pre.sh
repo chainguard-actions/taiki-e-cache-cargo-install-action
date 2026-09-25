@@ -354,16 +354,26 @@ else
   features="${features//,/-}" # Commas are not allowed in cache key names
   key="${tool}-${version}-${host_arch}-${host_os}${locked_key}-features-${features:-default}-no-default-features-${no_default_features}-all-features-${all_features}"
 fi
-{
-  printf 'tool=%s\n' "$(printf '%s' "${tool}" | tr -d '\n\r')"
-  printf 'version=%s\n' "$(printf '%s' "${version}" | tr -d '\n\r')"
-  printf 'key=%s\n' "$(printf '%s' "${key}" | tr -d '\n\r')"
-  printf 'path=%s\n' "$(printf '%s' "${safe_bin_dir}" | tr -d '\n\r')"
-  printf 'locked=%s\n' "$(printf '%s' "${locked}" | tr -d '\n\r')"
-  printf 'git=%s\n' "$(printf '%s' "${git}" | tr -d '\n\r')"
-  printf 'tag=%s\n' "$(printf '%s' "${tag}" | tr -d '\n\r')"
-  printf 'rev=%s\n' "$(printf '%s' "${rev}" | tr -d '\n\r')"
-  printf 'features_flag=%s\n' "$(printf '%s' "${features_flag}" | tr -d '\n\r')"
-  printf 'no_default_features_flag=%s\n' "$(printf '%s' "${no_default_features_flag}" | tr -d '\n\r')"
-  printf 'all_features_flag=%s\n' "$(printf '%s' "${all_features_flag}" | tr -d '\n\r')"
-} >>"${GITHUB_OUTPUT}"
+safe_tool=$(printf '%s' "${tool}" | tr -d '\n\r')
+safe_version=$(printf '%s' "${version}" | tr -d '\n\r')
+safe_key=$(printf '%s' "${key}" | tr -d '\n\r')
+safe_locked=$(printf '%s' "${locked}" | tr -d '\n\r')
+safe_git=$(printf '%s' "${git}" | tr -d '\n\r')
+safe_tag=$(printf '%s' "${tag}" | tr -d '\n\r')
+safe_rev=$(printf '%s' "${rev}" | tr -d '\n\r')
+safe_features_flag=$(printf '%s' "${features_flag}" | tr -d '\n\r')
+safe_no_default_features_flag=$(printf '%s' "${no_default_features_flag}" | tr -d '\n\r')
+safe_all_features_flag=$(printf '%s' "${all_features_flag}" | tr -d '\n\r')
+cat >>"${GITHUB_OUTPUT}" <<EOF
+tool=${safe_tool}
+version=${safe_version}
+key=${safe_key}
+path=${safe_bin_dir}
+locked=${safe_locked}
+git=${safe_git}
+tag=${safe_tag}
+rev=${safe_rev}
+features_flag=${safe_features_flag}
+no_default_features_flag=${safe_no_default_features_flag}
+all_features_flag=${safe_all_features_flag}
+EOF
