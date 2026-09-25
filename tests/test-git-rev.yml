@@ -1,4 +1,4 @@
-name: Test install from git with rev
+name: Test git install with rev
 on:
   workflow_dispatch:
 jobs:
@@ -14,29 +14,45 @@ jobs:
         run: |
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable --profile minimal
           echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
-      - name: Install parse-changelog from git using rev
+      - name: Resolve commit SHA for toml-cli v0.2.3
+        id: resolve-rev
+        run: |
+          # Use ^{} dereference to get the commit SHA even for annotated tags
+          REV=$(git ls-remote https://github.com/gnprice/toml-cli refs/tags/v0.2.3^{} | awk '{print $1}')
+          if [ -z "$REV" ]; then
+            # Fallback: try without dereference (lightweight tag)
+            REV=$(git ls-remote https://github.com/gnprice/toml-cli refs/tags/v0.2.3 | awk '{print $1}')
+          fi
+          echo "Resolved rev: $REV"
+          if [ -z "$REV" ]; then
+            echo "FAIL: could not resolve commit SHA for v0.2.3 tag"
+            exit 1
+          fi
+          echo "rev=$REV" >> "$GITHUB_OUTPUT"
+      - name: Install toml-cli from git with specific rev
         id: action
         uses: .
         with:
-          tool: parse-changelog
-          git: https://github.com/taiki-e/parse-changelog
-          rev: d231414
-          locked: 'false'
-      - name: Assert parse-changelog is installed and on PATH
+          tool: toml-cli
+          git: https://github.com/gnprice/toml-cli
+          rev: ${{ steps.resolve-rev.outputs.rev }}
+          locked: 'true'
+      - name: Assert toml-cli is installed and on PATH
         run: |
           echo "PATH: $PATH"
-          echo "Checking parse-changelog command is available on PATH..."
-          if ! command -v parse-changelog > /dev/null 2>&1; then
-            echo "FAIL: parse-changelog command not found on PATH"
+          echo "Checking toml command is available on PATH..."
+          if ! command -v toml > /dev/null 2>&1; then
+            echo "FAIL: toml command not found on PATH"
             exit 1
           fi
-          echo "PASS: parse-changelog command found"
-      - name: Assert parse-changelog runs successfully
+          echo "PASS: toml command found"
+      - name: Assert toml-cli version is correct
         run: |
-          VERSION=$(parse-changelog --version 2>&1 || true)
+          VERSION=$(toml --version 2>&1 || true)
           echo "actual version output: $VERSION"
-          if [ -z "$VERSION" ]; then
-            echo "FAIL: parse-changelog --version returned empty output"
+          if echo "$VERSION" | grep -q "0.2.3"; then
+            echo "PASS: version 0.2.3 confirmed"
+          else
+            echo "FAIL: expected version 0.2.3 in output: $VERSION"
             exit 1
           fi
-          echo "PASS: parse-changelog is functional"

@@ -10,48 +10,34 @@
 
 **Harden Agent Version:** `2`
 
-Action **taiki-e--cache-cargo-install-action/v3.0.5** was hardened automatically. 2 finding(s) were identified and resolved across 1 iteration(s).
+Action **taiki-e--cache-cargo-install-action/v3.0.5** was hardened automatically. 1 finding(s) were identified and resolved across 1 iteration(s).
 
 ## Findings Fixed
 
-### unpinned-uses (severity: high)
-
-Multiple `uses:` references in workflow files are pinned to mutable branch or tag refs instead of immutable 40-character commit SHAs, making the action vulnerable to supply-chain attacks if those refs are updated maliciously.
-
-Failing references:
-- `uses: taiki-e/github-actions/.github/workflows/tidy.yml@main` (branch ref)
-- `uses: taiki-e/checkout-action@v1` (tag ref, appears twice)
-- `uses: taiki-e/github-actions/install-rust@stable` (branch ref, appears twice)
-- `uses: taiki-e/github-actions/.github/workflows/action-release.yml@main` (branch ref)
-
-Locations:
-
-- `.github/workflows/ci.yml:26`
-- `.github/workflows/ci.yml:68`
-- `.github/workflows/ci.yml:69`
-- `.github/workflows/ci.yml:152`
-- `.github/workflows/ci.yml:157`
-- `.github/workflows/release.yml:29`
-
 ### github-env-injection (severity: high)
 
-In pre.sh, user-controlled values derived from action inputs (INPUT_TOOL, INPUT_GIT, INPUT_TAG, INPUT_REV, INPUT_FEATURES, etc.) are written to $GITHUB_PATH and $GITHUB_OUTPUT without the required newline-stripping sanitization (`printf '%s' "$VAR" | tr -d '\n\r'`). An attacker-controlled input containing a newline character could inject arbitrary key=value pairs into the runner's environment or path.
+pre.sh writes user-controlled input values to $GITHUB_PATH and $GITHUB_OUTPUT without the required sanitization step (`printf '%s' ... | tr -d '\n\r'`).
 
-1. `printf '%s\n' "${bin_dir}" >> "${GITHUB_PATH}"` — `bin_dir` is constructed from `tool` (user-supplied via INPUT_TOOL) without sanitization.
-2. The heredoc `cat >> "${GITHUB_OUTPUT}" <<EOF` writes `tool`, `version`, `key`, `git`, `tag`, `rev`, `features_flag`, etc. — all derived from user inputs — without sanitization.
+(1) Line ~311: `printf '%s\n' "${bin_dir}" >> "${GITHUB_PATH}"` — `bin_dir` is constructed as `${RUNNER_TOOL_CACHE}/${tool}/bin` where `tool` is read from `INPUT_TOOL` (mapped from `inputs.tool`, a caller-controlled value). A newline embedded in the tool name could inject arbitrary entries into $GITHUB_PATH.
+
+(2) Line ~319: A heredoc `cat >> "${GITHUB_OUTPUT}" <<EOF` writes `tool`, `version`, `key`, `git`, `tag`, `rev`, `features_flag`, `no_default_features_flag`, and `all_features_flag` — all derived from caller-controlled inputs (`inputs.tool`, `inputs.git`, `inputs.tag`, `inputs.rev`, `inputs.features`, etc.) — directly to $GITHUB_OUTPUT without sanitization. A newline in any of these values could inject additional key=value pairs into the output context.
 
 Locations:
 
-- `pre.sh:315`
-- `pre.sh:328`
+- `pre.sh:311`
+- `pre.sh:319`
 
 ## Iteration Notes
 
 ### Iteration 1
 
-**Fixes applied:** unpinned-uses, github-env-injection
+**Fixes applied:** github-env-injection
 
 **Notes:**
 
-Fixed all 6 unpinned `uses:` references in .github/workflows/ci.yml and .github/workflows/release.yml by pinning them to full 40-character commit SHAs (taiki-e/github-actions@3da7d39bb26122d232edd731a1813082711e3037 for main/stable refs, taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b for v1). Fixed github-env-injection in pre.sh by sanitizing all user-controlled values (tool, version, key, bin_dir, locked, git, tag, rev, features_flag, no_default_features_flag, all_features_flag) with `printf '%s' "$VAR" | tr -d '\n\r'` before writing to $GITHUB_PATH and $GITHUB_OUTPUT.
+Fixed two github-env-injection vulnerabilities in pre.sh:
+
+1. GITHUB_PATH write (line ~311): Changed `printf '%s\n' "${bin_dir}" >> "${GITHUB_PATH}"` to sanitize bin_dir using `printf '%s' "${bin_dir}" | tr -d '\n\r'` before writing. bin_dir is derived from INPUT_TOOL (caller-controlled), so a newline in the tool name could inject arbitrary entries into $GITHUB_PATH.
+
+2. GITHUB_OUTPUT write (line ~319): Replaced the heredoc `cat >> "${GITHUB_OUTPUT}" <<EOF` (which wrote tool, version, key, path, locked, git, tag, rev, features_flag, no_default_features_flag, all_features_flag directly) with individual `printf` calls that each sanitize their value with `printf '%s' "${VAR}" | tr -d '\n\r'` before writing. This prevents a newline embedded in any caller-controlled input from injecting additional key=value pairs into the output context.
 
