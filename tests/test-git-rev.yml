@@ -18,16 +18,26 @@ jobs:
           fi
           cargo --version
           mkdir -p "$RUNNER_TOOL_CACHE"
+      - name: Resolve rev for toml-cli v0.2.3
+        id: resolve
+        run: |
+          # Resolve the commit SHA for the v0.2.3 tag of toml-cli
+          REV=$(git ls-remote https://github.com/gnprice/toml-cli refs/tags/v0.2.3 | awk '{print $1}')
+          echo "Resolved rev: $REV"
+          if [ -z "$REV" ]; then
+            echo "FAIL: could not resolve rev for v0.2.3 tag"
+            exit 1
+          fi
+          echo "rev=$REV" >> "$GITHUB_OUTPUT"
       - id: action
         uses: .
         with:
           tool: toml-cli
           git: https://github.com/gnprice/toml-cli
-          # SHA of the v0.2.3 tag on gnprice/toml-cli
-          rev: 77edab6883c8b9a3f3e3d0e3e3e3e3e3e3e3e3e3
-      - name: Assert binary is available
+          rev: ${{ steps.resolve.outputs.rev }}
+      - name: Assert binary is available after git+rev install
         run: |
-          echo "Checking if toml binary is available..."
+          echo "Checking if toml binary is available after git+rev install..."
           TOOL_BIN="$RUNNER_TOOL_CACHE/toml-cli/bin/toml"
           echo "Looking for binary at: $TOOL_BIN"
           if [ -f "$TOOL_BIN" ]; then
