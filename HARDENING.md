@@ -10,25 +10,22 @@
 
 **Harden Agent Version:** `2`
 
-Action **taiki-e--cache-cargo-install-action/v3.0.8** was hardened automatically. 2 finding(s) were identified and resolved across 1 iteration(s).
+Action **taiki-e--cache-cargo-install-action/v3.0.8** was hardened automatically. 1 finding(s) were identified and resolved across 1 iteration(s).
 
 ## Findings Fixed
 
 ### github-env-injection (severity: high)
 
-pre.sh writes user-controlled input data to $GITHUB_PATH without sanitization. The variable `bin_dir` is constructed as `${RUNNER_TOOL_CACHE}/${tool}/bin` where `tool` is sourced directly from `INPUT_TOOL` (mapped from `inputs.tool` in action.yml). The write `printf '%s\n' "${bin_dir}" >> "${GITHUB_PATH}"` does not apply the required `tr -d '\n\r'` sanitization step before writing to the special environment file, allowing a newline injection attack that could add arbitrary entries to the runner's PATH.
+pre.sh writes user-controlled input values to $GITHUB_PATH and $GITHUB_OUTPUT without the required sanitization step (`printf '%s' ... | tr -d '\n\r'`).
+
+(1) GITHUB_PATH write: `printf '%s\n' "${bin_dir}" >> "${GITHUB_PATH}"` — `bin_dir` is constructed as `${RUNNER_TOOL_CACHE}/${tool}/bin` where `tool` is read from the `INPUT_TOOL` environment variable, which is set from `${{ inputs.tool }}` in action.yml. An attacker-controlled crate name containing a newline could inject an arbitrary additional path entry.
+
+(2) GITHUB_OUTPUT heredoc write: `cat >> "${GITHUB_OUTPUT}" <<EOF` writes multiple values derived from user inputs (`tool`, `version`, `key`, `git`, `tag`, `rev`, `features_flag`, etc.) without sanitization. A newline embedded in any of these values (e.g. `inputs.tool`, `inputs.git`, `inputs.tag`, `inputs.rev`, `inputs.features`) could inject additional `key=value` pairs into $GITHUB_OUTPUT, potentially overwriting outputs consumed by downstream steps.
 
 Locations:
 
-- `pre.sh:338`
-
-### github-env-injection (severity: high)
-
-pre.sh writes multiple user-controlled input values to $GITHUB_OUTPUT via a heredoc (`cat >> "${GITHUB_OUTPUT}" << EOF`) without sanitization. The values written include `tool` (from `inputs.tool`), `version`, `key`, `git` (from `inputs.git`), `tag` (from `inputs.tag`), `rev` (from `inputs.rev`), and feature flags derived from user inputs. A heredoc does not strip embedded newlines from variable values, so an attacker-controlled input containing a newline could inject additional key=value pairs into GITHUB_OUTPUT, potentially overwriting outputs consumed by later steps.
-
-Locations:
-
-- `pre.sh:344`
+- `pre.sh:296`
+- `pre.sh:305`
 
 ## Iteration Notes
 
@@ -38,7 +35,9 @@ Locations:
 
 **Notes:**
 
-Fixed two github-env-injection findings in pre.sh:
-1. GITHUB_PATH write (line 338): Added `safe_bin_dir=$(printf '%s' "${bin_dir}" | tr -d '\n\r')` and used the sanitized variable in the printf write to GITHUB_PATH.
-2. GITHUB_OUTPUT heredoc (line 344): Added sanitization for all 11 user-controlled variables (tool, version, key, path, locked, git, tag, rev, features_flag, no_default_features_flag, all_features_flag) using `printf '%s' "${var}" | tr -d '\n\r'` before the heredoc, and replaced raw variable references in the heredoc with their sanitized `safe_*` counterparts. This prevents newline injection attacks that could add arbitrary entries to the runner's PATH or inject additional key=value pairs into GITHUB_OUTPUT.
+Fixed pre.sh to sanitize all user-controlled values before writing to $GITHUB_PATH and $GITHUB_OUTPUT:
+
+1. GITHUB_PATH write (line 296): Added `safe_bin_dir=$(printf '%s' "${bin_dir}" | tr -d '\n\r')` and used `safe_bin_dir` in the printf write instead of the raw `bin_dir`.
+
+2. GITHUB_OUTPUT heredoc write (line 305): Added sanitized versions of all user-controlled variables (tool, version, key, locked, git, tag, rev, features_flag, no_default_features_flag, all_features_flag, bin_dir) using `printf '%s' "${VAR}" | tr -d '\n\r'`, then used the safe_ prefixed variables in the heredoc write. This prevents newline injection attacks where attacker-controlled input values containing embedded newlines could inject additional key=value pairs into $GITHUB_OUTPUT or additional path entries into $GITHUB_PATH.
 
