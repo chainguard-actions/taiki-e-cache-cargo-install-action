@@ -10,25 +10,22 @@
 
 **Harden Agent Version:** `2`
 
-Action **taiki-e--cache-cargo-install-action/v3.0.4** was hardened automatically. 2 finding(s) were identified and resolved across 1 iteration(s).
+Action **taiki-e--cache-cargo-install-action/v3.0.4** was hardened automatically. 1 finding(s) were identified and resolved across 1 iteration(s).
 
 ## Findings Fixed
 
 ### github-env-injection (severity: high)
 
-pre.sh writes `bin_dir` (derived from user-controlled `INPUT_TOOL` / `tool`) to `$GITHUB_PATH` without the required sanitization step (`printf '%s' ... | tr -d '\n\r'`). An attacker-controlled crate name containing newlines could inject arbitrary entries into the runner's PATH. The offending line is: `printf '%s\n' "${bin_dir}" >> "${GITHUB_PATH}"`
+In pre.sh, user-controlled input values are written to $GITHUB_PATH and $GITHUB_OUTPUT without the required newline-stripping sanitization (`printf '%s' ... | tr -d '\n\r'`). 
+
+(1) `printf '%s\n' "${bin_dir}" >> "${GITHUB_PATH}"` — `bin_dir` is constructed as `${RUNNER_TOOL_CACHE}/${tool}/bin` where `tool` is read from `INPUT_TOOL` (set from `${{ inputs.tool }}`). An attacker-controlled `inputs.tool` value containing embedded newlines can inject additional entries into GITHUB_PATH.
+
+(2) `cat >> "${GITHUB_OUTPUT}" << EOF` — the heredoc writes `tool`, `version`, `key`, `git`, `tag`, `rev`, `features_flag`, `no_default_features_flag`, and `all_features_flag` to GITHUB_OUTPUT. All of these are derived from user-controlled inputs (`inputs.tool`, `inputs.git`, `inputs.tag`, `inputs.rev`, `inputs.features`) without any `tr -d '\n\r'` sanitization. An attacker can inject arbitrary key=value pairs into GITHUB_OUTPUT by embedding newlines in these inputs.
 
 Locations:
 
-- `pre.sh:314`
-
-### github-env-injection (severity: high)
-
-pre.sh writes multiple user-controlled values (`tool`, `version`, `key`, `git`, `tag`, `rev`, `features_flag`, etc.) to `$GITHUB_OUTPUT` via a heredoc (`cat >> "${GITHUB_OUTPUT}" << EOF`) without any sanitization (`tr -d '\n\r'`). Values like `tool`, `tag`, and `rev` originate from `INPUT_TOOL`, `INPUT_TAG`, and `INPUT_REV` — all caller-supplied inputs. A newline embedded in any of these values could inject additional key=value pairs into GITHUB_OUTPUT, poisoning downstream step outputs.
-
-Locations:
-
-- `pre.sh:328`
+- `pre.sh:295`
+- `pre.sh:305`
 
 ## Iteration Notes
 
@@ -38,7 +35,9 @@ Locations:
 
 **Notes:**
 
-Fixed two github-env-injection findings in pre.sh:
-1. Line ~314 (GITHUB_PATH): Added sanitization of `bin_dir` (derived from user-controlled `INPUT_TOOL`) using `safe_bin_dir=$(printf '%s' "${bin_dir}" | tr -d '\n\r')` before writing to $GITHUB_PATH.
-2. Line ~328 (GITHUB_OUTPUT heredoc): Replaced direct use of user-controlled variables in the heredoc with sanitized versions. Each value (tool, version, key, path/bin_dir, locked, git, tag, rev, features_flag, no_default_features_flag, all_features_flag) is now sanitized via `printf '%s' "${var}" | tr -d '\n\r'` before being written to $GITHUB_OUTPUT, preventing newline injection attacks.
+Fixed two github-env-injection vulnerabilities in pre.sh:
+
+1. GITHUB_PATH write (line 295): Added `safe_bin_dir=$(printf '%s' "${bin_dir}" | tr -d '\n\r')` and used `safe_bin_dir` in the `printf` write to `$GITHUB_PATH`.
+
+2. GITHUB_OUTPUT write (line 305): Replaced the heredoc `cat >> "${GITHUB_OUTPUT}" << EOF` with individual sanitized writes. Each user-controlled variable (tool, version, key, bin_dir, locked, git, tag, rev, features_flag, no_default_features_flag, all_features_flag) is first sanitized via `printf '%s' "${var}" | tr -d '\n\r'` into a `safe_*` variable, then written using `printf 'key=%s\n' "${safe_var}"` in a grouped `{ ... } >> "${GITHUB_OUTPUT}"` block. This prevents newline injection attacks where attacker-controlled inputs containing embedded newlines could inject arbitrary key=value pairs.
 
