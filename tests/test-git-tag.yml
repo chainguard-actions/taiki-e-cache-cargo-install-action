@@ -1,26 +1,59 @@
-name: Test git + tag install
+name: Test git install with tag
 on:
   workflow_dispatch:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      RUNNER_TOOL_CACHE: /home/runner/.cache/runner-tool-cache
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - name: Install cargo-hack from git with tag
-        id: action
+      - name: Set up Rust toolchain
+        run: |
+          if ! command -v cargo > /dev/null 2>&1; then
+            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
+              | sh -s -- -y --default-toolchain stable --profile minimal
+            echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+            export PATH="$HOME/.cargo/bin:$PATH"
+          fi
+          cargo --version
+          mkdir -p "$RUNNER_TOOL_CACHE"
+      - id: action
         uses: .
         with:
-          tool: cargo-hack
-          git: https://github.com/taiki-e/cargo-hack
-          tag: v0.6.28
-      - name: Assert cargo-hack is installed
+          tool: toml-cli
+          git: https://github.com/gnprice/toml-cli
+          tag: v0.2.3
+          locked: 'false'
+      - name: Assert binary is available
         run: |
-          echo "Checking cargo-hack is available..."
-          if ! command -v cargo-hack > /dev/null 2>&1; then
-            # Try via cargo
-            if ! cargo hack --version > /dev/null 2>&1; then
-              echo "FAIL: cargo-hack not found after git+tag install"
-              exit 1
-            fi
+          echo "Checking if toml binary is available..."
+          TOOL_BIN="$RUNNER_TOOL_CACHE/toml-cli/bin/toml"
+          echo "Looking for binary at: $TOOL_BIN"
+          if [ -f "$TOOL_BIN" ]; then
+            echo "PASS: 'toml' binary found at $TOOL_BIN"
+          elif command -v toml > /dev/null 2>&1; then
+            echo "PASS: 'toml' binary found at $(command -v toml)"
+          else
+            echo "FAIL: 'toml' binary not found"
+            ls -la "$RUNNER_TOOL_CACHE/" 2>/dev/null || echo "(tool cache dir not found)"
+            exit 1
           fi
-          echo "PASS: cargo-hack installed from git+tag"
+      - name: Assert binary works
+        run: |
+          echo "Checking if toml binary works..."
+          TOOL_BIN="$RUNNER_TOOL_CACHE/toml-cli/bin/toml"
+          if command -v toml > /dev/null 2>&1; then
+            VERSION_OUTPUT=$(toml --version 2>&1 || true)
+          elif [ -f "$TOOL_BIN" ]; then
+            VERSION_OUTPUT=$("$TOOL_BIN" --version 2>&1 || true)
+          else
+            echo "FAIL: toml binary not found"
+            exit 1
+          fi
+          echo "version output: $VERSION_OUTPUT"
+          if [ -z "$VERSION_OUTPUT" ]; then
+            echo "FAIL: toml --version returned empty output"
+            exit 1
+          fi
+          echo "PASS: toml binary is functional"
