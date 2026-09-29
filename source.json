@@ -6,7 +6,7 @@
   "url": "https://github.com/taiki-e/cache-cargo-install-action",
   "policy_sha": "d636be7e43ef829af6e853da6b3c7566db9f72fe",
   "test_policy_sha": "843adf9e4b8f85d0c08b27b9d0b09dd094b54702",
-  "test_agent_version": "1",
+  "test_agent_version": "2",
   "harden_agent_version": "2",
-  "dependency_fingerprint": "sha256:d2aa8507651c31d964008d4b59de25d3629d0becddc672414a7f2059b304f690"
+  "dependency_fingerprint": "sha256:3c0b431ecf6345764baa738c9212a7becb79dcc3acaa7ad3265369c205db076c"
 }
