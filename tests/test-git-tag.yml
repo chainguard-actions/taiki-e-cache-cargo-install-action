@@ -25,9 +25,9 @@ jobs:
           git: https://github.com/gnprice/toml-cli
           tag: v0.2.3
           locked: 'false'
-      - name: Assert binary is available after git+tag install
+      - name: Assert binary is available
         run: |
-          echo "Checking if toml binary is available after git+tag install..."
+          echo "Checking if toml binary is available..."
           TOOL_BIN="$RUNNER_TOOL_CACHE/toml-cli/bin/toml"
           echo "Looking for binary at: $TOOL_BIN"
           if [ -f "$TOOL_BIN" ]; then

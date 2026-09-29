@@ -10,25 +10,22 @@
 
 **Harden Agent Version:** `2`
 
-Action **taiki-e--cache-cargo-install-action/v3.0.4** was hardened automatically. 2 finding(s) were identified and resolved across 1 iteration(s).
+Action **taiki-e--cache-cargo-install-action/v3.0.4** was hardened automatically. 1 finding(s) were identified and resolved across 1 iteration(s).
 
 ## Findings Fixed
 
 ### github-env-injection (severity: high)
 
-pre.sh writes user-controlled input values to $GITHUB_PATH without sanitization. The variable `bin_dir` is constructed as `${RUNNER_TOOL_CACHE}/${tool}/bin` where `tool` is derived from `INPUT_TOOL` (mapped from `inputs.tool` in action.yml). The write `printf '%s\n' "${bin_dir}" >> "${GITHUB_PATH}"` does not apply `tr -d '\n\r'` before writing, allowing a crafted tool name containing newlines to inject arbitrary entries into the runner's PATH.
+In pre.sh, user-controlled input values are written to $GITHUB_PATH and $GITHUB_OUTPUT without the required sanitization step (`printf '%s' ... | tr -d '\n\r'`). 
+
+(1) `printf '%s\n' "${bin_dir}" >> "${GITHUB_PATH}"` — `bin_dir` is constructed as `${RUNNER_TOOL_CACHE}/${tool}/bin` where `tool` is derived directly from `INPUT_TOOL` (the `inputs.tool` value set by the calling workflow). A newline embedded in the tool name could inject an arbitrary path into GITHUB_PATH.
+
+(2) `cat >> "${GITHUB_OUTPUT}" <<EOF ... tool=${tool} ... git=${git} tag=${tag} rev=${rev} features_flag=${features_flag} ... EOF` — multiple user-controlled values (tool, git, tag, rev, and derived flags) are written to GITHUB_OUTPUT via a heredoc without sanitization. A newline in any of these values could inject additional key=value pairs into GITHUB_OUTPUT, potentially overwriting outputs consumed by downstream steps.
 
 Locations:
 
-- `pre.sh:287`
-
-### github-env-injection (severity: high)
-
-pre.sh writes multiple user-controlled input values to $GITHUB_OUTPUT via a heredoc (`cat >> "${GITHUB_OUTPUT}" << EOF`) without sanitization. The values written include `tool` (from `inputs.tool`), `version`, `key`, `git` (from `inputs.git`), `tag` (from `inputs.tag`), `rev` (from `inputs.rev`), `features_flag` (from `inputs.features`), `no_default_features_flag`, and `all_features_flag`. None of these are passed through `printf '%s' ... | tr -d '\n\r'` before being written, allowing a crafted input containing newlines to inject arbitrary key=value pairs into GITHUB_OUTPUT, potentially overwriting subsequent step outputs.
-
-Locations:
-
-- `pre.sh:295`
+- `pre.sh:276`
+- `pre.sh:284`
 
 ## Iteration Notes
 
@@ -38,9 +35,9 @@ Locations:
 
 **Notes:**
 
-Fixed two github-env-injection findings in pre.sh:
+Fixed two github-env-injection vulnerabilities in pre.sh:
 
-1. Line 287 (GITHUB_PATH): Added sanitization of `bin_dir` (derived from user-controlled `INPUT_TOOL`) before writing to `$GITHUB_PATH`. Now uses `safe_bin_dir=$(printf '%s' "${bin_dir}" | tr -d '\n\r')` and writes the sanitized value.
+1. GITHUB_PATH write (line ~276): Added sanitization of `bin_dir` (derived from user-controlled `INPUT_TOOL`) using `safe_bin_dir=$(printf '%s' "${bin_dir}" | tr -d '\n\r')` before writing to GITHUB_PATH.
 
-2. Line 295 (GITHUB_OUTPUT): Replaced the unsanitized heredoc (`cat >> "${GITHUB_OUTPUT}" << EOF`) with individual sanitized `printf` calls. Each user-controlled value (`tool`, `version`, `key`, `git`, `tag`, `rev`, `features_flag`, `no_default_features_flag`, `all_features_flag`, `locked`) is first passed through `printf '%s' "${var}" | tr -d '\n\r'` to strip newlines before being written to `$GITHUB_OUTPUT`, preventing newline injection attacks that could inject arbitrary key=value pairs.
+2. GITHUB_OUTPUT write (line ~284): Added sanitization for all 10 user-controlled values written to GITHUB_OUTPUT (tool, version, key, path/bin_dir, locked, git, tag, rev, features_flag, no_default_features_flag, all_features_flag) using `printf '%s' "${VAR}" | tr -d '\n\r'` for each. The heredoc now uses the sanitized `safe_*` variables, preventing newline injection attacks that could inject additional key=value pairs into GITHUB_OUTPUT.
 
