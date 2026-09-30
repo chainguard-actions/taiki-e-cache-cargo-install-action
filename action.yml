@@ -137,7 +137,7 @@ runs:
       if: runner.os == 'Windows'
     - name: Restore Cache
       id: cache
-      uses: chainguard-actions/actions-cache@38c9e2f39b3b539d2c7bdb22ccc9cb381ee084b7 # v6.1.0
+      uses: chainguard-actions/actions-cache@244dfed44d8c4e917b332280fb2c1063eda3d9be # v6.1.0
       with:
         path: ${{ runner.os == 'Windows' && steps.pre-windows.outputs.path || steps.pre-unix.outputs.path }}
         key: ${{ runner.os == 'Windows' && steps.pre-windows.outputs.key || steps.pre-unix.outputs.key }}
