@@ -1,5 +1,6 @@
 name: cache-cargo-install-action
 description: GitHub Action for cargo install with cache
+
 inputs:
   tool:
     description: Crate to install
@@ -13,7 +14,6 @@ inputs:
       Install from the specified Git URL
 
       This currently requires one of 'tag' or 'rev' input option.
-
     required: false
   tag:
     description: Tag to use when installing from git
@@ -33,6 +33,7 @@ inputs:
     description: Pass `--all-features` to `cargo install`
     required: false
     default: 'false'
+
 # Note:
 # - inputs.* should be manually mapped to INPUT_* due to https://github.com/actions/runner/issues/665
 # - Use GITHUB_*/RUNNER_* instead of github.*/runner.* due to https://github.com/actions/runner/issues/2185
